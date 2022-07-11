@@ -10,7 +10,7 @@ L.Control.TimeLineSlider = L.Control.extend({
         },
         extraChangeMapParams: {},
         initializeChange: true,
-        
+
         thumbHeight: "4.5px",
         labelWidth: "80px",
         betweenLabelAndRangeSpace: "20px",
@@ -18,7 +18,9 @@ L.Control.TimeLineSlider = L.Control.extend({
         labelFontSize: "14px",
         activeColor: "#37adbf",
         inactiveColor: "#8e8e8e",
-        
+        disabledColor: "#222222",
+        unloadedColor: "#555555",
+
         backgroundOpacity: 0.75,
         backgroundColor: "#ffffff",
 
@@ -26,6 +28,7 @@ L.Control.TimeLineSlider = L.Control.extend({
         bottomBgPadding: "0px",
         rightBgPadding: "30px",
         leftBgPadding: "30px",
+        disabled: false,
 
     },
 
@@ -35,12 +38,25 @@ L.Control.TimeLineSlider = L.Control.extend({
                 console.log("You are not using the value or label from the timeline to change the map.");
             };
         }
-        
+
         if (parseFloat(options.thumbHeight) <= 2) {
             console.log("The nodes on the timeline will not appear properly if its radius is less than 2px.")
         }
 
         L.setOptions(this, options);
+    },
+
+    gotoValue: function(value) {
+        if(value > that.rangeLabelArray.length || value < 1)
+            return;
+
+        curValue = value;
+        var curLabel = that.rangeLabelArray[curValue-1].innerHTML;
+
+        // Change map according to either current label or value chosen
+        mapParams = {value: curValue, label: curLabel, map: that.map}
+        allChangeMapParameters = {...mapParams, ...that.options.extraChangeMapParams};
+        that.options.changeMap(allChangeMapParameters);
     },
     onAdd: function(map) {
         this.map = map;
@@ -75,47 +91,48 @@ L.Control.TimeLineSlider = L.Control.extend({
         this.thumbSize = parseFloat(this.options.thumbHeight) * 2;
         // double the thumb size when its active
         this.activeThumbSize = this.thumbSize * 2;
-  
+
         // make the width of the range div holding the input the number of intervals * the label width and add the thumb size on either end of the range
         this.rangeWidthCSS = parseFloat(this.options.labelWidth) * (this.options.timelineItems.length-1) + (this.thumbSize*2);
-        
+
         // move labels over to the left so they line up; move half the width of the label and adjust for thumb radius
         this.rlLabelMargin = parseFloat(this.options.labelWidth)/2 - (parseFloat(this.options.thumbHeight)/2);
-        
+
         // 2.5 because that is half the height of the range input
         this.topLabelMargin = parseFloat(this.options.betweenLabelAndRangeSpace) - parseFloat(this.options.thumbHeight) - 2.5;
-        
+
         this.backgroundRGBA = this.hexToRGBA(this.options.backgroundColor, this.options.backgroundOpacity);
         this.coverBackgroundRGBA = this.hexToRGBA(this.options.backgroundColor, 0);
-        
+        this.disabled = this.options.disabled;
+        // this.activeColor = this.options.activeColor;
+        // this.inactiveColor = this.options.inactiveColor;
+        this.timelineLoadedArray = Array(this.options.timelineItems.length).fill(false);
+        L.DomUtil.disableTextSelection();
+
         that = this;
 
         this.sheet.textContent = this.setupStartStyles();
 
         /* When input gets changed change styles on slider and trigger user's changeMap function */
         L.DomEvent.on(this.rangeInput, "input", function() {
-            
-            curValue = this.value;
-
+            that.gotoValue(+this.value);
+            that.sheet.textContent = that.setupStartStyles();
             that.sheet.textContent += that.getTrackStyle(this, that.sliderLength);
-            var curLabel = that.rangeLabelArray[curValue-1].innerHTML;
-            
-            // Change map according to either current label or value chosen
-            mapParams = {value: curValue, label: curLabel, map: map}
-            allChangeMapParameters = {...mapParams, ...that.options.extraChangeMapParams};
-            that.options.changeMap(allChangeMapParameters);
         });
 
         // Add click event to each label so it triggers input change for corresponding value
         for (li of this.rangeLabelArray) {
             L.DomEvent.on(li, "click", function (e) {
+                if( true == that.disabled)
+                    return;
+
                 var targetli = e.target;
                 var index = that.rangeLabelArray.indexOf(targetli);
                 that.rangeInput.value = index + 1;
-               
+
                 var inputEvent = new Event('input');
                 that.rangeInput.dispatchEvent(inputEvent);
-               
+
             });
         };
 
@@ -133,7 +150,72 @@ L.Control.TimeLineSlider = L.Control.extend({
         // remove control html element
         L.DomUtil.remove(this.container);
     },
-    
+
+    disable: function() {
+        this.disabled = true;
+        // that.activeColor = this.options.disabledColor;
+        // that.inactiveColor = this.options.disabledColor;
+        L.DomUtil.get("rangeinputslide").disabled = true;
+        this.sheet.textContent = this.setupStartStyles();
+        this.sheet.textContent += this.getTrackStyle(that.rangeInput, that.sliderLength);
+        // for (li of this.rangeLabelArray)
+        // {
+        //     if(this.disabled == true)
+        //       L.DomUtil.addClass(li, 'disabled');
+        //     else
+        //       L.DomUtil.removeClass(li,'disabled');
+        // }
+    },
+
+    enable: function() {
+        this.disabled = false;
+        L.DomUtil.get("rangeinputslide").disabled = false;
+        // that.activeColor = this.options.activeColor;
+        // that.inactiveColor = this.options.inactiveColor;
+        this.sheet.textContent = this.setupStartStyles();
+        this.sheet.textContent += this.getTrackStyle(that.rangeInput, that.sliderLength);
+        // for (li of this.rangeLabelArray)
+        // {
+        //     if(this.disabled == true)
+        //       L.DomUtil.addClass(li, 'disabled');
+        //     else
+        //       L.DomUtil.removeClass(li,'disabled');
+        // }
+    },
+
+    nextTick: function() {
+        if(this.disabled == true)
+            return;
+        if(+curValue == that.rangeLabelArray.length)
+            return;
+        this.gotoValue(+curValue+1);
+        that.rangeInput.value = +curValue;
+        this.sheet.textContent = this.setupStartStyles();
+        this.sheet.textContent += this.getTrackStyle(that.rangeInput, that.sliderLength);
+    },
+
+    prevTick: function() {
+        if(this.disabled == true)
+            return;
+        if(+curValue == 1)
+            return;
+        this.gotoValue(+curValue-1);
+        that.rangeInput.value = +curValue;
+        this.sheet.textContent = this.setupStartStyles();
+        this.sheet.textContent += this.getTrackStyle(that.rangeInput, that.sliderLength);
+    },
+
+    itemLoaded: function(itemIndex, loaded) {
+        // set stype of itemIndex to loaded
+        that.timelineLoadedArray[itemIndex] = loaded;
+        if(true == loaded)
+            L.DomUtil.addClass(that.rangeLabelArray[itemIndex], 'loaded');
+        else
+            L.DomUtil.removeClass(that.rangeLabelArray[itemIndex], 'loaded');
+        that.sheet.textContent = that.setupStartStyles();
+        that.sheet.textContent += that.getTrackStyle(that.rangeInput, that.sliderLength);
+    },
+
     hexToRGBA: function(hex, opacity){
         // from https://stackoverflow.com/questions/21646738/convert-hex-to-rgba
         var c;
@@ -150,15 +232,16 @@ L.Control.TimeLineSlider = L.Control.extend({
 
     setupStartStyles: function() {
         style = `
-            .control_container { 
+            .control_container {
                 background-color: ${that.backgroundRGBA};
                 padding: ${that.options.topBgPadding} ${that.options.rightBgPadding} ${that.options.bottomBgPadding} ${that.options.leftBgPadding};
+                border-radius: 4px;
             }
 
             .range {
                 position: relative;
                 left: -${that.thumbSize}px;
-                height: 5px;
+                height: 3px;
                 width: ${that.rangeWidthCSS}px;
             }
 
@@ -169,12 +252,16 @@ L.Control.TimeLineSlider = L.Control.extend({
                 -webkit-appearance: none;
             }
 
+            .range input:disabled {
+                filter: brightness(50%);
+            }
+
             /* -1 because the height is 2 (half the height) */
             .range input::-webkit-slider-thumb {
                 background: ${that.options.activeColor};
                 margin: -${that.thumbSize - 1}px 0 0;
                 width: ${that.activeThumbSize}px;
-                height: ${that.activeThumbSize}px;    
+                height: ${that.activeThumbSize}px;
                 -webkit-appearance: none;
                 border-radius: 50%;
                 cursor: pointer;
@@ -227,7 +314,7 @@ L.Control.TimeLineSlider = L.Control.extend({
                 outline: none;
             }
 
-            . range input[type=range]::-moz-focus-outer {
+            .range input[type=range]::-moz-focus-outer {
                 border: 0;
             }
 
@@ -238,7 +325,7 @@ L.Control.TimeLineSlider = L.Control.extend({
             }
 
             .range-labels li {
-                color: ${that.options.inactiveColor};
+                color: ${that.options.unloadedColor};
                 width: ${that.options.labelWidth};
                 font-size: ${that.options.labelFontSize};
                 position: relative;
@@ -258,23 +345,26 @@ L.Control.TimeLineSlider = L.Control.extend({
                 margin: 0 auto;
                 border-radius: 50%;
             }
+            .range-labels .loaded {
+                color: ${that.options.inactiveColor};
+            }
             .range-labels .active {
                 color: ${that.options.activeColor};
             }
-            .range-labels .selected::before {
-                background: ${that.options.activeColor};
-            }
-            .range-labels .active.selected::before {
+            .range-labels .active::before {
                 display: none;
             }
+            .range-labels .disabled {
+                filter: brightness(50%);
+            }
             `;
-            
+
 
             return style;
 
     },
 
-    getTrackStyle: function (el, sliderLength) {  
+    getTrackStyle: function (el, sliderLength) {
         prefs = ['webkit-slider-runnable-track', 'moz-range-track', 'ms-track'];
 
         var curVal = el.value,
@@ -286,28 +376,32 @@ L.Control.TimeLineSlider = L.Control.extend({
         // Remove active and selected classes from all labels
         for (li of that.rangeLabelArray) {
             L.DomUtil.removeClass(li, 'active');
-            L.DomUtil.removeClass(li, 'selected');
+            // L.DomUtil.removeClass(li, 'selected');
+            if(that.disabled == true)
+              L.DomUtil.addClass(li, 'disabled');
+            else
+              L.DomUtil.removeClass(li,'disabled');
         }
 
         // Find label that should be active and give it appropriate classes
         var curLabel = that.rangeLabelArray[labelIndex];
         L.DomUtil.addClass(curLabel, 'active');
-        L.DomUtil.addClass(curLabel, 'selected');
+        // L.DomUtil.addClass(curLabel, 'selected');
 
         // For labels before active label, add selected class
-        for (i = 0; i < curVal; i++) {
-            L.DomUtil.addClass(that.rangeLabelArray[i], 'selected');
-        }
+        // for (i = 0; i < curVal; i++) {
+        //     L.DomUtil.addClass(that.rangeLabelArray[i], 'selected');
+        // }
 
         // Change background gradient
         for (var i = 0; i < prefs.length; i++) {
-          style += `.range {background: linear-gradient(to right, ${that.coverBackgroundRGBA} 0%, ${that.coverBackgroundRGBA} ${coverVal}%, ${that.options.activeColor} ${coverVal}%, ${that.options.activeColor} ${val}%,  ${that.coverBackgroundRGBA} 0%, ${that.coverBackgroundRGBA} 100%)}`;
+          // style += `.range {background: linear-gradient(to right, ${that.coverBackgroundRGBA} 0%, ${that.coverBackgroundRGBA} ${coverVal}%, ${that.activeColor} ${coverVal}%, ${that.activeColor} ${val}%,  ${that.coverBackgroundRGBA} 0%, ${that.coverBackgroundRGBA} 100%)}`;
           style += '.range input::-' + prefs[i] + `{background: linear-gradient(to right, ${that.coverBackgroundRGBA} 0%, ${that.coverBackgroundRGBA} ${coverVal}%, ${that.options.activeColor} 0%, ${that.options.activeColor} ${val}%, ${that.options.inactiveColor} ${val}%, ${that.options.inactiveColor} ${100-coverVal}%, ${that.coverBackgroundRGBA} ${100-coverVal}%, ${that.coverBackgroundRGBA} 100%)}`;
         }
 
         return style;
     }
-      
+
 })
 
 L.control.timelineSlider = function(options) {
