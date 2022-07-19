@@ -1,4 +1,6 @@
 // TODO: parameterize timeline colors, overall length, and length between points (css styles)
+var that = null;
+var curValue = null;
 L.Control.TimeLineSlider = L.Control.extend({
 
     options: {
@@ -54,8 +56,8 @@ L.Control.TimeLineSlider = L.Control.extend({
         var curLabel = that.rangeLabelArray[curValue-1].innerHTML;
 
         // Change map according to either current label or value chosen
-        mapParams = {value: curValue, label: curLabel, map: that.map}
-        allChangeMapParameters = {...mapParams, ...that.options.extraChangeMapParams};
+        var mapParams = {value: curValue, label: curLabel, map: that.map}
+        var allChangeMapParameters = {...mapParams, ...that.options.extraChangeMapParams};
         that.options.changeMap(allChangeMapParameters);
     },
     onAdd: function(map) {
@@ -121,7 +123,7 @@ L.Control.TimeLineSlider = L.Control.extend({
         });
 
         // Add click event to each label so it triggers input change for corresponding value
-        for (li of this.rangeLabelArray) {
+        for (let li of this.rangeLabelArray) {
             L.DomEvent.on(li, "click", function (e) {
                 if( true == that.disabled)
                     return;
@@ -231,7 +233,7 @@ L.Control.TimeLineSlider = L.Control.extend({
     },
 
     setupStartStyles: function() {
-        style = `
+        var style = `
             .control_container {
                 background-color: ${that.backgroundRGBA};
                 padding: ${that.options.topBgPadding} ${that.options.rightBgPadding} ${that.options.bottomBgPadding} ${that.options.leftBgPadding};
@@ -365,16 +367,16 @@ L.Control.TimeLineSlider = L.Control.extend({
     },
 
     getTrackStyle: function (el, sliderLength) {
-        prefs = ['webkit-slider-runnable-track', 'moz-range-track', 'ms-track'];
+        var prefs = ['webkit-slider-runnable-track', 'moz-range-track', 'ms-track'];
 
         var curVal = el.value,
             labelIndex = curVal - 1,
             val = (labelIndex) * (100/(sliderLength-1)),
             coverVal = (parseFloat(that.thumbSize)/that.rangeWidthCSS) * 100;
-            style = '';
+        var style = '';
 
         // Remove active and selected classes from all labels
-        for (li of that.rangeLabelArray) {
+        for (let li of that.rangeLabelArray) {
             L.DomUtil.removeClass(li, 'active');
             // L.DomUtil.removeClass(li, 'selected');
             if(that.disabled == true)
