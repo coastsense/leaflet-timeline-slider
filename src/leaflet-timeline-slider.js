@@ -49,6 +49,7 @@ L.Control.TimeLineSlider = L.Control.extend({
     },
 
     gotoValue: function(value) {
+	debugger
         if(value > that.rangeLabelArray.length || value < 1)
             return;
 
@@ -187,24 +188,26 @@ L.Control.TimeLineSlider = L.Control.extend({
 
     nextTick: function() {
         if(this.disabled == true)
-            return;
+            return +curValue;
         if(+curValue == that.rangeLabelArray.length)
-            return;
+            return +curValue + 1;
         this.gotoValue(+curValue+1);
         that.rangeInput.value = +curValue;
         this.sheet.textContent = this.setupStartStyles();
         this.sheet.textContent += this.getTrackStyle(that.rangeInput, that.sliderLength);
+	return +curValue
     },
 
     prevTick: function() {
         if(this.disabled == true)
-            return;
+            return +curValue;
         if(+curValue == 1)
-            return;
+            return +curValue - 1;
         this.gotoValue(+curValue-1);
         that.rangeInput.value = +curValue;
         this.sheet.textContent = this.setupStartStyles();
         this.sheet.textContent += this.getTrackStyle(that.rangeInput, that.sliderLength);
+	return +curValue
     },
 
     itemLoaded: function(itemIndex, loaded) {
@@ -380,7 +383,7 @@ L.Control.TimeLineSlider = L.Control.extend({
             L.DomUtil.removeClass(li, 'active');
             // L.DomUtil.removeClass(li, 'selected');
             if(that.disabled == true)
-              L.DomUtil.addClass(li, 'disabled');
+		L.DomUtil.addClass(li, 'disabled');
             else
               L.DomUtil.removeClass(li,'disabled');
         }
