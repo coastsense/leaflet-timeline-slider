@@ -49,6 +49,7 @@ L.Control.TimeLineSlider = L.Control.extend({
     },
 
     gotoValue: function(value) {
+	debugger
         if(value > that.rangeLabelArray.length || value < 1)
             return;
 
@@ -189,7 +190,7 @@ L.Control.TimeLineSlider = L.Control.extend({
         if(this.disabled == true)
             return;
         if(+curValue == that.rangeLabelArray.length)
-            return;
+            return null;
         this.gotoValue(+curValue+1);
         that.rangeInput.value = +curValue;
         this.sheet.textContent = this.setupStartStyles();
@@ -200,7 +201,7 @@ L.Control.TimeLineSlider = L.Control.extend({
         if(this.disabled == true)
             return;
         if(+curValue == 1)
-            return;
+            return null;
         this.gotoValue(+curValue-1);
         that.rangeInput.value = +curValue;
         this.sheet.textContent = this.setupStartStyles();
